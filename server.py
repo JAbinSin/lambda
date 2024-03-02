@@ -1,9 +1,10 @@
 from flask import Flask, render_template, Response, request, redirect, url_for, session
 from camera import generate_frames
 import threading
+import secrets
 
 app = Flask(__name__)
-app.secret_key = 'L1Mb1Q1FRI6b'  # Set a secret key for session management
+app.secret_key = secrets.token_hex(16)  # Set a secret key for session management
 
 lock  = threading.Lock()
 

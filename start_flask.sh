@@ -8,4 +8,4 @@ export FLASK_RUN_PORT=5000  # Set your desired port
 mkdir -p logs
 
 # Run your Flask application with --host=0.0.0.0
-flask run --host=0.0.0.0 > logs/system.log 2>&1
+flask run --host=0.0.0.0 --debug > logs/system.log 2>&1
