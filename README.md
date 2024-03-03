@@ -6,7 +6,12 @@ Research Project
 Create an [Environment](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment) And [Activate](https://flask.palletsprojects.com/en/3.0.x/installation/#activate-the-environment)
 
 Clone Ultralytics:
+
 `git clone https://github.com/ultralytics/ultralytics.git`
+
+Install Ultralytics:
+
+`pip install ultralytics`
 
 Install the requirements use:
 
@@ -34,4 +39,5 @@ Install the requirements use:
 
 - [Python >= 3.9](http://docs.python-guide.org/en/latest/starting/installation/)
 - [pip](https://pip.pypa.io/en/stable/installation/)
+- python3-dev `sudo apt-get install python3-dev  # for python3.x installs`
 - [virtualenv](https://flask.palletsprojects.com/en/3.0.x/installation/#) (Recommended)
