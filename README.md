@@ -3,7 +3,9 @@ Research Project
 
 ## Installation
 
-To install the requirements use:
+Create an [Environment](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment) And [Activate]([pip](https://pip.pypa.io/en/stable/installing/))
+
+Install the requirements use:
 
 `pip3 install -r requirements.txt`
 
@@ -30,4 +32,4 @@ To install the requirements use:
 
 - [Python >= 3.9](http://docs.python-guide.org/en/latest/starting/installation/)
 - [pip](https://pip.pypa.io/en/stable/installing/)
-- [virtualenv](https://virtualenv.pypa.io/en/stable/installation.html) (Recommended)
+- [virtualenv](https://flask.palletsprojects.com/en/3.0.x/installation/#) (Recommended)
