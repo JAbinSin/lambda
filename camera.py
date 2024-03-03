@@ -1,5 +1,9 @@
 import cv2
 import time
+from ultralytics import YOLO
+
+# Load the pre-trained YOLOv8 pose estimation model
+pose_model = YOLO("yolov8n-pose.pt")
 
 # Load the pre-trained face cascade outside of the function
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -14,12 +18,25 @@ def detect_faces(frame):
     # Draw rectangles around the detected faces
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+    # Run YOLOv8 interface on the frame
+    results = pose_model.predict(frame, show_labels=False, show_conf=False, show_boxes=False)
+
+    # Visualize the results on the frame
+    frame = results[0].plot()
     
     return frame
 
 def generate_frames():
     # Open the camera (0 represents the default camera)
     cap = cv2.VideoCapture(0)
+
+    # Set the resolution to 720p
+    cap.set(3, 1280)  # Width
+    cap.set(4, 720)   # Height
+
+    # Set the frame rate to 60fps
+    cap.set(cv2.CAP_PROP_FPS, 60)
     
     if not cap.isOpened():
         print("Error: Could not open camera.")
@@ -37,7 +54,7 @@ def generate_frames():
             break
         
         # Resize the frame for better performance
-        #frame = cv2.resize(frame, (640, 480))
+        frame = cv2.resize(frame, (640, 480))
         
         # Perform face detection
         frame_with_faces = detect_faces(frame)

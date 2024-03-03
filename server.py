@@ -4,17 +4,25 @@ import threading
 import secrets
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)  # Set a secret key for session management
+app.secret_key = secrets.token_hex()  # Set a secret key for session management
 
 lock  = threading.Lock()
 
 @app.route('/')
 def index():
-    return render_template('login.html')
+    # Check if the user is authenticated
+    if 'authenticated' in session and session['authenticated']:
+        return redirect(url_for('dashboard'))
+    else:
+        return render_template('login.html')
 
 @app.route('/login', methods=['GET','POST'])
 def login():
     error = None
+
+    # Check if the user is already authenticated
+    if 'authenticated' in session and session['authenticated']:
+        return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
         email = request.form['email']
@@ -40,6 +48,11 @@ def login():
 def register():
     return render_template('register.html')
 
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect(url_for('login'))
+
 @app.route('/dashboard')
 def dashboard():
     # Check if the user is authenticated
@@ -47,6 +60,10 @@ def dashboard():
         return render_template('dashboard.html')
     else:
         return redirect(url_for('login'))
+    
+@app.route('/help')
+def help():
+    return render_template('help.html')
 
 @app.route('/video_feed')
 def video_feed():

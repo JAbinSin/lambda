@@ -1,0 +1,56 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Authenticated -->
+    {% if session['authenticated'] %}
+    <div class='container-fluid'>
+        <a class='navbar-brand ms-4' href="{{ url_for('dashboard') }}">
+            <img src='../../static/img/logo/logo-test.jpg' alt='' width='30' height='inherit' class='d-inline-block align-text-top'>Lambda
+        </a>
+        <button class='navbar-toggler' type='button' data-bs-toggle='collapse' data-bs-target='#navbarSupportedContent' aria-controls='navbarSupportedContent' aria-expanded='false' aria-label='Toggle navigation'>
+            <span class='navbar-toggler-icon'></span>
+        </button>
+        <div class='collapse navbar-collapse justify-content-end' id='navbarSupportedContent'>
+            <ul class='navbar-nav mb-2 mb-lg-0'>
+                <li class='nav-item'>
+                    <a class='nav-link' href='profile.html'><i class='bi bi-person-circle'></i> Profile</i></a>
+                </li>
+                <li class='nav-item'>
+                    <a class='nav-link' href='settings.html'><i class='bi bi-gear-fill'></i> Settings</i></a>
+                </li>
+                <li class='nav-item dropdown'>
+                    <a class='nav-link dropdown-toggle' href='#' id='navbarDropdown' role='button' data-bs-toggle='dropdown' aria-expanded='false'>
+                        Admin Settings
+                    </a>
+                    <ul class='dropdown-menu dropdown-menu-dark' aria-labelledby='navbarDropdown'>
+                        <li><a class='dropdown-item' href='manage-user.php'><i class='bi bi-person-lines-fill'></i></i> Manage User</a></li>
+                    </ul>
+                </li>
+                <li class='nav-item'>
+                    <a class='nav-link me-2' href="{{ url_for('logout') }}"><i class='bi bi-box-arrow-right'></i> Logout</i></a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    
+    <!-- Guest -->
+    {% else %}
+    <div class='container-fluid'>
+        <a class='navbar-brand ms-4' href="{{ url_for('dashboard') }}">
+            <img src='../../static/img/logo/logo-test.jpg' alt='' width='30' height='inherit' class='d-inline-block align-text-top'>Lambda
+        </a>
+        <button class='navbar-toggler' type='button' data-bs-toggle='collapse' data-bs-target='#navbarSupportedContent' aria-controls='navbarSupportedContent' aria-expanded='false' aria-label='Toggle navigation'>
+            <span class='navbar-toggler-icon'></span>
+        </button>
+        <div class='collapse navbar-collapse justify-content-end' id='navbarSupportedContent'>
+            <ul class='navbar-nav  mb-2 mb-lg-0'>
+            <li class='nav-item'>
+                <a class='nav-link' href="{{ url_for('login') }}"><i class='bi bi-person-check'></i> Login</i></a>
+            </li>
+            <li class='nav-item'>
+                <a class='nav-link me-2' href="{{ url_for('help') }}"><i class='bi bi-person-plus'></i> Help</i></a>
+            </li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</nav>

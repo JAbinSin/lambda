@@ -5,10 +5,12 @@ Research Project
 
 Create an [Environment](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment) And [Activate](https://flask.palletsprojects.com/en/3.0.x/installation/#activate-the-environment)
 
+Clone Ultralytics:
+`git clone https://github.com/ultralytics/ultralytics.git`
+
 Install the requirements use:
 
 `pip3 install -r requirements.txt`
-
 
 ## Requirements
 
