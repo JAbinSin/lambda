@@ -3,7 +3,7 @@ Research Project
 
 ## Installation
 
-Create an [Environment](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment) And [Activate](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment)
+Create an [Environment](https://flask.palletsprojects.com/en/3.0.x/installation/#create-an-environment) And [Activate](https://flask.palletsprojects.com/en/3.0.x/installation/#activate-the-environment)
 
 Install the requirements use:
 
