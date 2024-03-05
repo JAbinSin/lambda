@@ -20,10 +20,10 @@ def detect_faces(frame):
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
     # Run YOLOv8 interface on the frame
-    results = pose_model.predict(frame, show_labels=False, show_conf=False, show_boxes=False)
+    results = pose_model.predict(frame)
 
     # Visualize the results on the frame
-    frame = results[0].plot()
+    frame = results[0].plot(boxes=False)
     
     return frame
 
