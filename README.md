@@ -1,5 +1,5 @@
 # lambda
-Research Project
+Research Project: Face Detection and Recognition Door Lock System Using Image Processing with Behavioral Analysis
 
 ## Installation
 
@@ -23,9 +23,9 @@ Install the requirements use:
 
 | Hardware | Minimum | Recommended |
 | :---:   | :---: | :---: |
-| Processor | Rockchip RK3399 | Rockchip RK3588 |
-| RAM | 4GB | 8GB |
-| NPU Support | N/A | 6 Tops AI computing power |
+| Processor | Intel Core i5 11th Gen / AMD Ryzen 5 5th Gen | Intel Core i7 11th Gen / AMD Ryzen 7 5th Gen |
+| RAM | 8GB | 16GB |
+| GPU | NVIDIA GTX 1050 | NVIDIA RTX 2080 |
 
 ### Minimum Camera Required
 
