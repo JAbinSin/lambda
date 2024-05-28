@@ -17,6 +17,17 @@ Install the requirements use:
 
 `pip3 install -r requirements.txt`
 
+## How to run
+
+If you have a virtual environment activate it
+
+`.venv\Scripts\activate`
+
+To run the web application use the following command
+
+`flask --app server run --host=0.0.0.0 --debug`
+
+
 ## Requirements
 
 ### Hardware Requirement

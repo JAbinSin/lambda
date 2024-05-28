@@ -1,0 +1,8 @@
+.venv/
+logs/*
+__pycache__/
+script/__pycache__/
+captured_images/*
+static/images/*
+trained_models/*
+training/

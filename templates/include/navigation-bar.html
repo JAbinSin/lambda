@@ -11,18 +11,16 @@
         <div class='collapse navbar-collapse justify-content-end' id='navbarSupportedContent'>
             <ul class='navbar-nav mb-2 mb-lg-0'>
                 <li class='nav-item'>
-                    <a class='nav-link' href='profile.html'><i class='bi bi-person-circle'></i> Profile</i></a>
+                    <a class='nav-link' href="{{ url_for('user_profile') }}"><i class='bi bi-person-circle'></i> Profile</i></a>
                 </li>
                 <li class='nav-item'>
-                    <a class='nav-link' href='settings.html'><i class='bi bi-gear-fill'></i> Settings</i></a>
+                    <a class='nav-link' href="{{ url_for('manage_face') }}"><i class='bi bi-person-gear'></i> Manage Faces</i></a>
                 </li>
-                <li class='nav-item dropdown'>
-                    <a class='nav-link dropdown-toggle' href='#' id='navbarDropdown' role='button' data-bs-toggle='dropdown' aria-expanded='false'>
-                        Admin Settings
-                    </a>
-                    <ul class='dropdown-menu dropdown-menu-dark' aria-labelledby='navbarDropdown'>
-                        <li><a class='dropdown-item' href='manage-user.php'><i class='bi bi-person-lines-fill'></i></i> Manage User</a></li>
-                    </ul>
+                <li class='nav-item'>
+                    <a class='nav-link me-2' href="{{ url_for('history_page') }}"><i class='bi bi-bell-fill'></i> History</i></a>
+                </li>
+                <li class='nav-item'>
+                    <a class='nav-link me-2' href="{{ url_for('help_page') }}"><i class='bi bi-question-circle-fill'></i> Help</i></a>
                 </li>
                 <li class='nav-item'>
                     <a class='nav-link me-2' href="{{ url_for('logout') }}"><i class='bi bi-box-arrow-right'></i> Logout</i></a>
@@ -47,7 +45,7 @@
                 <a class='nav-link' href="{{ url_for('login') }}"><i class='bi bi-person-check'></i> Login</i></a>
             </li>
             <li class='nav-item'>
-                <a class='nav-link me-2' href="{{ url_for('help') }}"><i class='bi bi-person-plus'></i> Help</i></a>
+                <a class='nav-link me-2' href="{{ url_for('help_page') }}"><i class='bi bi-question-circle-fill'></i> Help</i></a>
             </li>
             </ul>
         </div>

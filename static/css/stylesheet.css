@@ -168,12 +168,20 @@ input::-webkit-inner-spin-button {
     .container {
         width: 90%;
     }
+    .container-list {
+        width: 1000%;
+        margin: auto;
+    }
 }
 
 @media (min-width: 577px) and (max-width: 768px) {
     /* Adjust styles for small devices (tablets) */
     .container {
         width: 70%;
+    }
+    .container-list {
+        width: 90%;
+        margin: auto;
     }
 }
 
@@ -182,6 +190,10 @@ input::-webkit-inner-spin-button {
     .container {
         width: 40%;
     }
+    .container-list {
+        width: 80%;
+        margin: auto;
+    }
 }
 
 @media (min-width: 1281px) and (max-width: 1920px) {
@@ -189,4 +201,58 @@ input::-webkit-inner-spin-button {
     .container {
         width: 40%;
     }
+    .container-list {
+        width: 80%;
+        margin: auto;
+    }
+}
+
+.dashboard-image-container {
+    margin-top: 20px; 
+}
+
+.dashboard-image {
+    width: 100%; 
+    height: auto; 
+    display: block; 
+    margin: auto; 
+    max-height: 100%; 
+}
+
+.border-dashboard {
+    border: 2px solid #fff; /* White border */
+    border-radius: 0.5rem; /* Rounded corners */
+}
+
+ /* Style for the loading circle */
+ .loading-circle {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 2s linear infinite;
+    margin: auto;
+    margin-top: 20px;
+}
+
+/* Animation for the loading circle */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#activity-history {
+    height: calc(90vh - 40px); /* 100% viewport height minus padding and margin */
+    overflow-y: auto; /* Add vertical scroll if content exceeds the height */
+}
+
+#logs-history {
+    height: calc(90vh - 40px); /* 100% viewport height minus padding and margin */
+    overflow-y: auto; /* Add vertical scroll if content exceeds the height */
+}
+
+.log-content {
+    font-size: 18px; /* Adjust the font size as needed */
+    line-height: 1.6; /* Adjust the line height as needed */
 }

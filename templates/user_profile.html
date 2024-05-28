@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Lambda | Profile</title>
+
+    <!-- Bootstrap 5 Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+
+    <!-- The meta tags used in the webpage -->
+    <!-- charset="utf-8" to use almost all the character and symbol in the world -->
+    <!-- viewport to make the webpage more responsive -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Link the local css to the webpage -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stylesheet.css') }}">  
+</head>
+
+<body class="d-grid gap-5 bg-secondary">
+    <!-- Include the Navigation Bar -->
+    {% include 'include/navigation-bar.html' %}
+    
+    <div class="container p-3 mb-2 bg-normal-92 text-white w-50 rounded-3 mt-5">
+        <h1 class="text-center mb-4 opacity-1">Admin Profile</h1>
+        <div class="row mb-3">
+            <label for="inputEmail" class="col-sm-2 col-form-label">Email:</label>
+            <div class="col-sm-7">
+                <input type="email" class="form-control" id="inputEmail" value="{{ email }}" readonly>
+            </div>
+            <div class="col-sm-3">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeEmailModal">Change Email</button>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <label for="inputEmail" class="col-sm-2 col-form-label">Password:</label>
+            <div class="col-sm-7">
+                <input type="password" class="form-control" id="inputEmail" value="***********" readonly>
+            </div>
+            <div class="col-sm-3">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <label for="inputRole" class="col-sm-2 col-form-label">Role:</label>
+            <div class="col-sm-10">
+                <input type="text" class="form-control" id="inputRole" value="Administrator" readonly>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for changing email -->
+    <div class="modal fade" id="changeEmailModal" tabindex="-1" aria-labelledby="changeEmailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add your form for changing email here -->
+                    <form id="changeEmailForm" action="{{ url_for('change_email') }}" method="post">
+                        <div class="mb-3">
+                            <label for="newEmail" class="form-label">New Email:</label>
+                            <input type="email" class="form-control" id="newEmail" name="newEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmEmail" class="form-label">Confirm Email:</label>
+                            <input type="email" class="form-control" id="confirmEmail" name="confirmEmail" required>
+                            <div id="emailMatchError" class="invalid-feedback">Emails do not match.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password:</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for changing password -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add your form for changing password here -->
+                    <form id="changePasswordForm" action="{{ url_for('change_password') }}" method="post">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Current Password:</label>
+                            <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">New Password:</label>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmNewPassword" class="form-label">Confirm New Password:</label>
+                            <input type="password" class="form-control" id="confirmNewPassword" name="confirmNewPassword" required>
+                            <div id="passwordMatchError" class="invalid-feedback">Passwords do not match.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusModalLabel">Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="statusModalBody">
+                    <!-- Status message will be injected here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Validate email match
+            const changeEmailForm = document.getElementById('changeEmailForm');
+            const newEmailInput = document.getElementById('newEmail');
+            const confirmEmailInput = document.getElementById('confirmEmail');
+            const emailMatchError = document.getElementById('emailMatchError');
+
+            function validateEmailMatch() {
+                if (newEmailInput.value !== confirmEmailInput.value) {
+                    emailMatchError.style.display = 'block';
+                    confirmEmailInput.setCustomValidity('Emails do not match.');
+                } else {
+                    emailMatchError.style.display = 'none';
+                    confirmEmailInput.setCustomValidity('');
+                }
+            }
+
+            newEmailInput.addEventListener('input', validateEmailMatch);
+            confirmEmailInput.addEventListener('input', validateEmailMatch);
+
+            // Handle email form submission
+            changeEmailForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(changeEmailForm);
+                fetch(changeEmailForm.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(text => {
+                    document.getElementById('statusModalBody').innerText = text;
+                    new bootstrap.Modal(document.getElementById('statusModal')).show();
+                })
+                .catch(error => {
+                    document.getElementById('statusModalBody').innerText = "An error occurred. Please try again.";
+                    new bootstrap.Modal(document.getElementById('statusModal')).show();
+                });
+            });
+
+            // Validate password match
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+            const passwordMatchError = document.getElementById('passwordMatchError');
+
+            function validatePasswordMatch() {
+                if (newPasswordInput.value !== confirmNewPasswordInput.value) {
+                    passwordMatchError.style.display = 'block';
+                    confirmNewPasswordInput.setCustomValidity('Passwords do not match.');
+                } else {
+                    passwordMatchError.style.display = 'none';
+                    confirmNewPasswordInput.setCustomValidity('');
+                }
+            }
+
+            newPasswordInput.addEventListener('input', validatePasswordMatch);
+            confirmNewPasswordInput.addEventListener('input', validatePasswordMatch);
+
+            // Handle password form submission
+            changePasswordForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(changePasswordForm);
+                fetch(changePasswordForm.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(text => {
+                    document.getElementById('statusModalBody').innerText = text;
+                    new bootstrap.Modal(document.getElementById('statusModal')).show();
+                })
+                .catch(error => {
+                    document.getElementById('statusModalBody').innerText = "An error occurred. Please try again.";
+                    new bootstrap.Modal(document.getElementById('statusModal')).show();
+                });
+            });
+
+            // Reload the page when the status modal is closed
+            const statusModal = document.getElementById('statusModal');
+            statusModal.addEventListener('hidden.bs.modal', function() {
+                location.reload();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>Lambda | Manage Face</title>
+
+		<!-- Bootstrap 5 Icons -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+		<!-- Bootstrap 5 -->
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+
+		<!-- The meta tags used in the webpage -->
+		<!-- charset="utf-8" to use almost all the character and symbol in the world -->
+		<!-- viewport to make the webpage more responsive -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<!-- Link the local css to the webpage -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/stylesheet.css') }}">	
+    </head>
+
+	<body class="d-grid gap-5 bg-secondary">
+		{% include 'include/navigation-bar.html' %}
+		<!-- Container for the table of the user list -->
+        <div class="container-list p-3 mb-2 bg-dark text-white table-responsive rounded-3">
+            <h1 class="text-center mb-2">Manage Faces</h1>
+            <div class="col text-center">
+                <button type="button" id="register-face-btn" class="btn btn-success mb-3 rounded-pill shadow-lg">Register Face</button>
+            </div>
+            <form class="needs-validation" action="{{ url_for('edit_face') }}" method="post"></form>
+                <table class="table table-dark table-striped align-middle table-bordered table-responsive">
+                    <thead class="text-center">
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for entry in label_to_names %}
+                        <tr>
+                            <td><img src="../static/images/{{ entry.label }}_face_1.jpg" alt="{{ entry.name }} Image"></td>
+                            <td>{{ entry.name }}</td>
+                            <td>
+                                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal{{ entry.name }}">Delete</button>
+                            </td>
+
+                            <!-- Confirmation Modal -->
+                            <div class="modal fade" id="confirmationModal{{ entry.name }}" tabindex="-1" aria-labelledby="confirmationModalLabel{{ entry.name }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-dark" id="confirmationModalLabel{{ entry.name }}">Confirmation</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-dark">
+                                            Are you sure you want to delete "{{ entry.name }}"?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-danger" onclick="deleteEntry('{{ entry.label }}')">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="registerModalLabel">Confirmation</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>I confirm that I am the only person in front of the camera.</p>
+                        <p>Note: Make sure you are the only person in front of the camera.</p>
+                        <p>Note: It would automatically save images of yourself.</p>
+                        <!-- Form for entering username -->
+                        <div class="mb-3">
+                            <label for="nameInput" class="form-label">Name:</label>
+                            <input type="text" class="form-control" id="nameInput" placeholder="Enter your name">
+                            <div id="nameError" class="text-danger mt-2" style="display: none;">This name already exists.</div>
+                        </div>
+                        <!-- Checkbox for agreement -->
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="confirmCheckbox">
+                            <label class="form-check-label" for="confirmCheckbox">I agree to the above conditions.</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <!-- Disabled "Continue" button initially -->
+                        <a href="{{ url_for('register_face') }}" class="btn btn-primary disabled" id="confirmRegisterBtn">Continue</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <script>
+            const existingNames = {{ label_to_names | tojson }};
+
+            document.getElementById('register-face-btn').addEventListener('click', function () {
+                var myModal = new bootstrap.Modal(document.getElementById('registerModal'), {});
+                myModal.show();
+            });
+
+            document.getElementById('confirmRegisterBtn').addEventListener('click', function () {
+                var myModal = new bootstrap.Modal(document.getElementById('registerModal'), {});
+                myModal.hide();
+            });
+
+            // Event listener for username input change
+            document.getElementById('nameInput').addEventListener('input', function () {
+                toggleContinueButton(); // Call toggle function when name input changes
+            });
+
+            // Function to enable or disable the "Continue" button based on the checkbox state
+            function toggleContinueButton() {
+                var confirmCheckbox = document.getElementById('confirmCheckbox');
+                var nameInput = document.getElementById('nameInput');
+                var confirmRegisterBtn = document.getElementById('confirmRegisterBtn');
+                var nameError = document.getElementById('nameError');
+
+                // Check if the name already exists
+                var nameExists = existingNames.some(entry => entry.name === nameInput.value.trim());
+
+                if (nameExists) {
+                    nameError.style.display = 'block';
+                    confirmRegisterBtn.classList.add("disabled");
+                } else {
+                    nameError.style.display = 'none';
+                    if (confirmCheckbox.checked && nameInput.value.trim() !== '') {
+                        confirmRegisterBtn.classList.remove("disabled");
+                    } else {
+                        confirmRegisterBtn.classList.add("disabled");
+                    }
+                }
+            }
+
+            // Event listener for checkbox change
+            document.getElementById('confirmCheckbox').addEventListener('change', function () {
+                toggleContinueButton(); // Call toggle function when checkbox state changes
+            });
+
+            // Event listener for modal show
+            document.getElementById('registerModal').addEventListener('shown.bs.modal', function () {
+                toggleContinueButton(); // Call toggle function when modal is shown to handle initial state
+            });
+
+            // Event listener for "Continue" button click
+            document.getElementById('confirmRegisterBtn').addEventListener('click', function () {
+                var myModal = new bootstrap.Modal(document.getElementById('registerModal'), {});
+                myModal.hide();
+            });
+
+            // Event listener for "Continue" button click
+            document.getElementById('confirmRegisterBtn').addEventListener('click', function () {
+                var name = document.getElementById('nameInput').value; // Get the name input value
+                var confirmCheckbox = document.getElementById('confirmCheckbox');
+
+                if (!confirmCheckbox.checked) {
+                    alert("Please agree to the conditions.");
+                    return;
+                }
+
+                // Check if the name already exists before sending the request
+                if (existingNames.some(entry => entry.name === name.trim())) {
+                    alert("This name already exists.");
+                    return;
+                }
+
+                fetch('/register_face', {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: name })
+                }).then(response => {
+                    if (response.ok) {
+                    window.location.href = '/register_face';
+                    } else {
+                    alert('Failed to register face.');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+
+            function deleteEntry(label) {
+                // Send an AJAX request to delete the entry
+                fetch('/delete_entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ label: label })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Reload the page after successful deletion
+                        location.reload();
+                    } else {
+                        alert('Failed to delete entry.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting entry.');
+                });
+            }
+        </script>
+	</body>
+</html>

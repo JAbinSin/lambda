@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 	<head>
-		<!-- Title of the site  is set in SESSION from the database.php -->
 		<title>Lambda | Home</title>
 
 		<!-- Bootstrap 5 Icons -->
@@ -18,12 +17,16 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
 		<!-- Link the local css to the webpage -->
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/stylesheet.css') }}">	</head>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/stylesheet.css') }}">	
+	</head>
 
 	<body class="d-grid gap-5 bg-secondary">
+		<!-- Include the Navigation Bar -->
+		{% include 'include/navigation-bar.html' %}
+
 		<div class="container p-3 mb-2 bg-normal-92 text-white w-50 rounded-3 mt-5">
 			<h1 class="text-center mb-2 opacity-1">Index</h1>
-			
+				
 		</div>
 	</body>
 </html>
