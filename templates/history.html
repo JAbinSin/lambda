@@ -3,6 +3,9 @@
 <head>
     <title>Lambda | History</title>
 
+    <!-- jQuery from CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
     <!-- Bootstrap 5 Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
@@ -11,8 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
 
     <!-- The meta tags used in the webpage -->
-    <!-- charset="utf-8" to use almost all the character and symbol in the world -->
-    <!-- viewport to make the webpage more responsive -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -37,12 +38,32 @@
                 </div>
             </div>
 
-            <!-- Main Content for Video Feed -->
+            <!-- Main Content for History Content -->
             <div class="col-md-8 p-3 mb-2 bg-dark text-white border-dashboard" id="main-content">
                 <h1 class="text-center mb-2">Content</h1>
                 <div class="dashboard-image-container text-center">
-                    <!-- Loading circle while waiting for the video feed -->
+                    <!-- Loading circle while waiting for the History Content -->
                     <div class="spinner-border loading-circle" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Modal -->
+    <div class="modal" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">Log Video</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <video id="logVideo" controls>
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
         </div>
@@ -72,10 +93,33 @@
                     } else {
                         // Display the content in the main content area
                         document.getElementById('main-content').innerHTML = `<h1 class="text-center mb-2">${filename}</h1> <hr> <pre class='log-content'>${data}</pre>`;
+                        // Register event listeners for the video buttons
+                        registerEventListeners();
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching log file content:', error);
+                });
+            }
+
+            // Function to register event listeners for view video buttons
+            function registerEventListeners() {
+                document.querySelectorAll('.view-video-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const videoFilename = this.getAttribute('data-video-filename');
+                        if (videoFilename) {
+                            const videoElement = document.getElementById('logVideo');
+                            const videoSource = document.createElement('source');
+                            videoSource.src = `/static/video/${videoFilename}`;
+                            videoSource.type = 'video/mp4';
+                            videoElement.innerHTML = ''; // Clear existing sources
+                            videoElement.appendChild(videoSource); // Append new source to video element
+                            videoElement.load(); // Reload video element to reflect new source
+                            $('#videoModal').modal('show');
+                        } else {
+                            alert('No video available for this log entry.');
+                        }
+                    });
                 });
             }
         });

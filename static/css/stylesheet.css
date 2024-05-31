@@ -256,3 +256,8 @@ input::-webkit-inner-spin-button {
     font-size: 18px; /* Adjust the font size as needed */
     line-height: 1.6; /* Adjust the line height as needed */
 }
+
+#logVideo {
+    max-width: 100%;
+    height: auto;
+}

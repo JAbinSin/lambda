@@ -3,15 +3,16 @@ import time
 import logging
 import sqlite3
 import smtplib
+import os
 from email.mime.text import MIMEText
 from datetime import datetime
 from ultralytics import YOLO
-from deepface import DeepFace
 import threading
 import xgboost as xgb
 import pandas as pd
-import numpy as np
+import joblib
 from flask import session
+from fer import FER  # Importing FER library
 
 # Disable logging for YOLOv8
 logging.getLogger('ultralytics').setLevel(logging.ERROR)
@@ -28,21 +29,34 @@ file_handler = logging.FileHandler(f'logs/{current_date}.log')
 file_handler.setLevel(logging.INFO)
 
 # Create formatter
-formatter = logging.Formatter('%(asctime)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(message)s ')
 file_handler.setFormatter(formatter)
 
 # Add file handler to logger
 detection_logger.addHandler(file_handler)
+
+# Ensure logs-video directory exists
+if not os.path.exists('static/video'):
+    os.makedirs('static/video')
 
 # Load the pre-trained YOLOv8 pose estimation model
 pose_model = YOLO("yolov8n-pose.pt")
 
 # Load the XGBoost model
 model_xgb = xgb.Booster()
-model_xgb.load_model('training/video/level-3-output/model_weights.xgb')
+model_xgb.load_model('trained_models/model_weights.xgb')
+scaler = joblib.load('trained_models/scaler.pkl')
 
 # Load the pre-trained face cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Define keypoint labels for the pose model
+labels = ["nose", "left_eye", "right_eye", "left_ear", "right_ear", "left_shoulder",
+          "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+          "left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"]
+
+# Initialize the FER emotion detection model
+emotion_detector = FER()
 
 # Function to reload LBPH trained model
 def reload_lbph_trained_model():
@@ -62,26 +76,46 @@ def get_db_connection():
 
 # Email notification function
 def send_email_notification(name, subject, message, email):
-    msg = MIMEText(message)
-    msg['Subject'] = subject
-    msg['From'] = 'lambda54312@gmail.com'
-    msg['To'] = email
+    def send_email():
+        msg = MIMEText(message)
+        msg['Subject'] = subject
+        msg['From'] = 'lambda54312@gmail.com'
+        msg['To'] = email
 
-    try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login('lambda54312@gmail.com', 'yowc qcuc dgxg ngol')
-            server.send_message(msg)
-        print(f"Email sent to {email}")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+        try:
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls()
+                server.login('lambda54312@gmail.com', 'yowc qcuc dgxg ngol')
+                server.send_message(msg)
+            print(f"Email sent to {email}")
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+
+    email_thread = threading.Thread(target=send_email)
+    email_thread.start()
 
 # Face detection and pose estimation function
-def detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, email):
+def detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, email, angry_detection_times, action_detection_times, video_writer, recording, pending_recording):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
     results = pose_model(frame, verbose=False)
-    frame_with_results = results[0].plot(boxes=False)
+    frame_with_results = frame.copy()
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    video_file = None
+
+    # Check if any keypoints are detected
+    if results and results[0].keypoints is not None and results[0].keypoints.conf is not None:
+        keypoints_numpy = results[0].keypoints.xyn.cpu().numpy()[0]
+        keypoints_scores = results[0].keypoints.conf.cpu().numpy()[0]
+
+        # Threshold for keypoint confidence
+        confidence_threshold = 0.5
+        labeled_keypoints = [[labels[i], kp[0], kp[1], score] for i, (kp, score) in enumerate(zip(keypoints_numpy, keypoints_scores))]
+        visible_keypoints = [label for label, x, y, score in labeled_keypoints if 0 <= x <= 1 and 0 <= y <= 1 and score > confidence_threshold]
+    else:
+        visible_keypoints = []
+
+    current_time = time.time()  # Ensure current_time is defined at the beginning of the function
 
     for r in results:
         bound_box = r.boxes.xyxy
@@ -89,8 +123,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
         keypoints = r.keypoints.xyn.tolist()
 
         for index, box in enumerate(bound_box):
-            if conf[index] > 0.75:
-                x1, y1, x2, y2 = box.tolist()
+            if conf[index] > 0.80:
                 data = {}
 
                 # Initialize the x and y lists for each possible key
@@ -99,24 +132,95 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                     data[f'y{j}'] = keypoints[index][j][1]
 
                 df = pd.DataFrame(data, index=[0])
-                dmatrix = xgb.DMatrix(df)
+                df_scaled = scaler.transform(df)
+                dmatrix = xgb.DMatrix(df_scaled)
                 behavior = model_xgb.predict(dmatrix)
-                binary_predictions = np.argmax(behavior)  # Get the class with the highest probability
+                binary_predictions = int(behavior[0])  # Get the class with the highest probability
 
                 # Determine action label
-                action_labels = ['drunk', 'kicking', 'punching', 'running', 'seating', 'smashing', 'squating', 'standing', 'walking']
+                action_labels = ['squatting', 'standing', 'punching', 'kicking']
                 action_label = action_labels[binary_predictions]
 
-                # Draw action label in upper left corner
-                cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                # Check the visibility of required keypoints
+                kicking_keypoints_visible = (
+                    all(kp in visible_keypoints for kp in ["right_hip", "right_knee", "right_ankle"]) or
+                    all(kp in visible_keypoints for kp in ["left_hip", "left_knee", "left_ankle"])
+                )
+                
+                punching_keypoints_visible = (
+                    all(kp in visible_keypoints for kp in ["right_shoulder", "right_elbow", "right_wrist"]) or
+                    all(kp in visible_keypoints for kp in ["left_shoulder", "left_elbow", "left_wrist"])
+                )
 
+                x, y, w, h = 0, 0, 0, 0  # Initialize x, y, w, h with default values
+                if action_label == "kicking" and kicking_keypoints_visible:
+                    cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                    if (x, y, w, h) not in pending_recording:
+                        pending_recording[(x, y, w, h)] = current_time
+                    else:
+                        if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                            action_detection_times[(x, y, w, h)] = current_time
+                            if not recording:
+                                video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
+                                video_filename = os.path.join('static', 'video', video_file)
+                                video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
+                                recording = True
+                            if video_file:
+                                detection_logger.info(f"Person detected kicking - {video_file}")
+                                subject = "Lambda System"
+                                message = "Person detected showing aggressive behavior - Kicking"
+                                send_email_notification(name, subject, message, email)
+                elif action_label == "punching" and punching_keypoints_visible:
+                    cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                    if (x, y, w, h) not in pending_recording:
+                        pending_recording[(x, y, w, h)] = current_time
+                    else:
+                        if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                            action_detection_times[(x, y, w, h)] = current_time
+                            if not recording:
+                                video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
+                                video_filename = os.path.join('static', 'video', video_file)
+                                video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
+                                recording = True
+                            if video_file:
+                                detection_logger.info(f"Person detected punching - {video_file}")
+                                subject = "Lambda System"
+                                message = "Person detected showing aggressive behavior - Punching"
+                                send_email_notification(name, subject, message, email)
     for (x, y, w, h) in faces:
         roi_gray = gray[y:y+h, x:x+w]
         roi_color = frame[y:y+h, x:x+w]
         try:
-            result = DeepFace.analyze(roi_color, actions=['emotion'], enforce_detection=False, detector_backend="opencv")
-            dominant_emotion = result[0].get("dominant_emotion", "Unknown")
-            cv2.putText(frame, f"Emotion: {dominant_emotion}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+            result = emotion_detector.detect_emotions(roi_color)
+            if result:
+                emotion_confidences = result[0]["emotions"]
+                dominant_emotion = max(emotion_confidences, key=emotion_confidences.get)
+                print(dominant_emotion, emotion_confidences[dominant_emotion])
+
+                if dominant_emotion == "angry":
+                    if emotion_confidences[dominant_emotion] > 0.50:  # Adjust threshold for confidence
+                        if (x, y, w, h) not in pending_recording:
+                            pending_recording[(x, y, w, h)] = current_time
+                        else:
+                            if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                                angry_detection_times[(x, y, w, h)] = current_time
+                                if not recording:
+                                    video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
+                                    video_filename = os.path.join('static', 'video', video_file)
+                                    video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
+                                    recording = True
+                                if video_file:
+                                    detection_logger.info(f"Angry person detected - {video_file}")
+                                    subject = "Lambda System"
+                                    message = "Angry person detected"
+                                    send_email_notification(name, subject, message, email)
+                    else:
+                        if (x, y, w, h) in pending_recording:
+                            pending_recording.pop((x, y, w, h))
+                else:
+                    if (x, y, w, h) in pending_recording:
+                        pending_recording.pop((x, y, w, h))
+
         except Exception as e:
             print("Error analyzing emotions:", e)
         
@@ -131,15 +235,18 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))
                 face_name = cursor.fetchone()
 
-            if face_name and confidence >= 50:
+            if face_name and confidence > 0.05:
                 name = face_name[0]
                 cv2.putText(frame_with_results, f"{name}: {confidence:.2f}%", (x, y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                current_time = time.time()
+
                 if name not in detection_times:
                     detection_times[name] = current_time
+                    subject = "Lambda System"
+                    message = "Face Detected from " + name
+                    send_email_notification(name, subject, message, email)
                 else:
                     if current_time - detection_times[name] >= 5 and (current_time - last_detection_time.get(name, 0)) >= 5:
-                        subject = "Face Detected"
+                        subject = "Lambda System"
                         message = "Face Detected from " + name
                         send_email_notification(name, subject, message, email)
                         last_detection_time[name] = current_time
@@ -151,14 +258,17 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
 
         cv2.rectangle(frame_with_results, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
-    # Reset detection times if face not seen for more than 5 seconds
-    current_time = time.time()
-    for name in list(face_last_seen.keys()):
-        if current_time - face_last_seen[name] > 5:
-            detection_times.pop(name, None)
-            face_last_seen.pop(name, None)
+    # Stop recording if no actions are detected for more than 5 seconds
+    if recording:
+        if all(current_time - t > 5 for t in angry_detection_times.values()) and all(current_time - t > 5 for t in action_detection_times.values()):
+            recording = False
+            video_writer.release()
+            video_writer = None
 
-    return frame_with_results
+    if recording:
+        video_writer.write(frame)
+
+    return frame_with_results, video_writer, recording, pending_recording
 
 # Frame generation function
 def generate_frames(email):
@@ -176,6 +286,11 @@ def generate_frames(email):
     detection_times = {}
     last_detection_time = {}
     face_last_seen = {}
+    angry_detection_times = {}
+    action_detection_times = {}  # Dictionary to track action detection times
+    pending_recording = {}  # Dictionary to track pending recordings
+    video_writer = None
+    recording = False
 
     while True:
         ret, frame = cap.read()
@@ -184,7 +299,9 @@ def generate_frames(email):
             break
 
         frame = cv2.resize(frame, (640, 480))
-        frame_with_faces_and_poses = detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, email)
+        frame_with_faces_and_poses, video_writer, recording, pending_recording = detect_faces_and_poses(
+            frame, detection_times, last_detection_time, face_last_seen, email, angry_detection_times, action_detection_times, video_writer, recording, pending_recording
+        )
 
         frame_count += 1
         elapsed_time = time.time() - start_time
@@ -197,16 +314,14 @@ def generate_frames(email):
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_with_faces_and_poses + b'\r\n')
 
-    cap.release()
+    if recording:
+        video_writer.release()
 
-# Function to continuously generate frames in a separate thread
-def run_camera(email):
-    while True:
-        generate_frames(email)
+    cap.release()
 
 if __name__ == "__main__":
     # Start the camera in a separate thread
     email = session.get('email')  # Set the email address here
-    camera_thread = threading.Thread(target=run_camera, args=(email,))
+    camera_thread = threading.Thread(target=generate_frames, args=(email,))
     camera_thread.daemon = True
     camera_thread.start()

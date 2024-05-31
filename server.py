@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, Response, request, redirect, url_for, session, jsonify, send_from_directory
 from script.camera import generate_frames
 from script.register import register_camera
 from script.captureState import set_capture_complete, is_capture_complete, set_training_complete, is_training_complete
@@ -8,6 +8,7 @@ import os
 import sqlite3
 import shutil
 import datetime
+import webview
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex()  # Set a secret key for session management
@@ -140,11 +141,11 @@ def read_logs():
             for line in file:
                 # Split the log entry by ' - ' to separate timestamp and message
                 log_parts = line.strip().split(' - ')
-                if len(log_parts) == 2:
-                    timestamp, message = log_parts
-                    logs.append({'timestamp': timestamp, 'message': message})
+                if len(log_parts) == 3:
+                    timestamp, message, video_filename = log_parts
+                    logs.append({'timestamp': timestamp, 'message': message, 'video_filename': video_filename})
                 else:
-                    logs.append({'timestamp': '', 'message': line.strip()})
+                    logs.append({'timestamp': '', 'message': '', 'video_filename': line.strip()})
     except FileNotFoundError:
         # Handle file not found error
         pass
@@ -180,8 +181,16 @@ def get_log_content():
     log_path = os.path.join('logs', filename)
     try:
         with open(log_path, 'r') as file:
-            content = file.read()
-        return content
+            content = file.readlines()
+            formatted_content = ""
+            for line in content:
+                # Check if the line contains a video filename
+                if ".mp4" in line:
+                    video_filename = line.split()[-1]
+                    formatted_content += f'{line.strip()} <button class="view-video-btn btn btn-outline-info btn-sm" data-video-filename="{video_filename}">View Video</button><br>'
+                else:
+                    formatted_content += line + "<br>"
+            return formatted_content
     except FileNotFoundError:
         return 'Log file not found'
 
@@ -356,5 +365,19 @@ def delete_entry():
     else:
         return jsonify(success=False), 403
 
+@app.route('/video/<filename>')
+def video(filename):
+    return send_from_directory('static/video', filename)
+
+@app.route('/get_activity_history')
+def get_activity_history():
+    # Read the logs
+    logsRead = read_logs()
+    # Render the activity history section
+    return render_template('activity_history.html', logs=logsRead)
+    
+webview.create_window('Lambda', app)
+
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True)
+    #app.run(debug=True, threaded=True)
+    webview.start()

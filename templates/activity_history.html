@@ -1,0 +1,13 @@
+<h2 class="text-center mb-2">Activity History</h2>
+<div class="list-group">
+    {% for log in logs[::-1] %}
+    <a class="list-group-item list-group-item-action bg-dark text-white">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">Detection</h5>
+            <small>{{ log.timestamp }}</small>
+        </div>
+        <p class="mb-1">{{ log.message }}</p>
+        <button class="view-video-btn btn btn-outline-info btn-sm" data-video-filename="{{ log.video_filename }}">View Video</button>
+    </a>
+    {% endfor %}
+</div>

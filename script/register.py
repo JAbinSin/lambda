@@ -4,6 +4,7 @@ import numpy as np
 import sqlite3
 from flask import session
 from script.captureState import set_capture_complete, set_training_complete
+from script.camera import reload_lbph_trained_model
 
 def register_camera(name):
     # Connect to SQLite3 database using a context manager
@@ -63,7 +64,6 @@ def register_camera(name):
         for (x, y, w, h) in faces:
             # Crop the face region
             face_roi = gray[y:y+h, x:x+w]
-            roi_color = frame[y:y+h, x:x+w]
             
             # Save the face image with the appropriate label as part of the filename
             image_path = os.path.join(output_folder, f"{label}_face_{count}.jpg")
@@ -77,6 +77,11 @@ def register_camera(name):
                 first_image_path = os.path.join("static/images", f"{label}_face_1.jpg")
                 print(first_image_path)
                 cv2.imwrite(first_image_path, face_roi)
+
+            # Draw a rectangle around the face
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+            # Display the number of images captured on the frame
+            cv2.putText(frame, f"Images captured: {count-1}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         
         # Encode the frame as JPEG
         ret, buffer = cv2.imencode('.jpg', frame)
@@ -86,7 +91,7 @@ def register_camera(name):
                b'Content-Type: image/jpeg\r\n\r\n' + frame_encoded + b'\r\n')
 
         # Break the loop after capturing 100 images
-        if count >= 100:
+        if count > 100:
             set_capture_complete(True)
             break
 
@@ -119,9 +124,11 @@ def register_camera(name):
             os.makedirs("trained_models")
         recognizer.save(f"trained_models/lbph_trained_model.yml")
         print("LBPH model trained and saved.")
+        reload_lbph_trained_model()
     
     set_training_complete(True)
 
 if __name__ == "__main__":
     name = session.get('name')
     register_camera(name)
+    reload_lbph_trained_model()
