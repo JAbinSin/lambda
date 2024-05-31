@@ -9,6 +9,8 @@ Install the requirements use:
 
 `pip3 install -r requirements.txt`
 
+PyTorch requirements vary by operating system and CUDA requirements, so it's recommended to install PyTorch first following instructions at https://pytorch.org/get-started/locally.
+
 ## How to run
 
 If you have a virtual environment activate it
