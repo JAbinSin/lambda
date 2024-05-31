@@ -35,10 +35,6 @@ file_handler.setFormatter(formatter)
 # Add file handler to logger
 detection_logger.addHandler(file_handler)
 
-# Ensure logs-video directory exists
-if not os.path.exists('static/video'):
-    os.makedirs('static/video')
-
 # Load the pre-trained YOLOv8 pose estimation model
 pose_model = YOLO("yolov8n-pose.pt")
 

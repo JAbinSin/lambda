@@ -23,8 +23,15 @@ DATABASE_FILE = 'database.db'
 DATABASE_PATH = os.path.join(DATABASE_DIR, DATABASE_FILE)
 
 # Check if the database directory exists, and create it if not
+# Ensure directory exists
 if not os.path.exists(DATABASE_DIR):
     os.makedirs(DATABASE_DIR)
+if not os.path.exists('static/video'):
+    os.makedirs('static/video')
+if not os.path.exists('static/images'):
+    os.makedirs('static/images')
+if not os.path.exists('captured_images'):
+    os.makedirs('captured_images')
 
 # Check if the database file exists, and create it if not
 if not os.path.exists(DATABASE_PATH):
