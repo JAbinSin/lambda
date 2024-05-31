@@ -165,7 +165,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 detection_logger.info(f"Person detected kicking - {video_file}")
                                 subject = "Lambda System"
                                 message = "Person detected showing aggressive behavior - Kicking"
-                                send_email_notification(name, subject, message, email)
+                                send_email_notification('', subject, message, email)
                 elif action_label == "punching" and punching_keypoints_visible:
                     cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                     if (x, y, w, h) not in pending_recording:
@@ -182,7 +182,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 detection_logger.info(f"Person detected punching - {video_file}")
                                 subject = "Lambda System"
                                 message = "Person detected showing aggressive behavior - Punching"
-                                send_email_notification(name, subject, message, email)
+                                send_email_notification('', subject, message, email)
     for (x, y, w, h) in faces:
         roi_gray = gray[y:y+h, x:x+w]
         roi_color = frame[y:y+h, x:x+w]
