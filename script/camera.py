@@ -5,6 +5,8 @@ import sqlite3
 import smtplib
 import os
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from datetime import datetime
 from ultralytics import YOLO
 import threading
@@ -71,13 +73,33 @@ def get_db_connection():
     return sqlite3.connect('database/database.db')
 
 # Email notification function
-def send_email_notification(name, subject, message, email):
+import threading
+import time
+
+def send_email_notification(name, subject, message, email, attachment_path=None):
     def send_email():
-        msg = MIMEText(message)
+
+        # Create a multipart message
+        msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = 'lambda54312@gmail.com'
         msg['To'] = email
 
+        # Attach the body message
+        body = MIMEText(message, 'plain')
+        msg.attach(body)
+
+        # Attach a file if provided
+        if attachment_path:
+            try:
+                with open(attachment_path, 'rb') as attachment:
+                    part = MIMEApplication(attachment.read(), Name=os.path.basename(attachment_path))
+                    part['Content-Disposition'] = f'attachment; filename="{os.path.basename(attachment_path)}"'
+                    msg.attach(part)
+            except Exception as e:
+                print(f"Failed to attach file: {e}")
+
+        # Send the email
         try:
             with smtplib.SMTP('smtp.gmail.com', 587) as server:
                 server.starttls()
@@ -98,6 +120,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
     frame_with_results = frame.copy()
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
     video_file = None
+    save_thumb = False
 
     # Check if any keypoints are detected
     if results and results[0].keypoints is not None and results[0].keypoints.conf is not None:
@@ -161,11 +184,17 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 video_filename = os.path.join('static', 'video', video_file)
                                 video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
                                 recording = True
+
+                                if save_thumb == False:
+                                    video_image_path = f"thumbnail/{int(current_time)}.png"
+                                    cv2.imwrite(video_image_path, frame_with_results)
+                                    save_thumb = True
                             if video_file:
                                 detection_logger.info(f"Person detected kicking - {video_file}")
-                                subject = "Lambda System"
+                                subject = "Aggressive Behavior Detected"
                                 message = "Person detected showing aggressive behavior - Kicking"
-                                send_email_notification('', subject, message, email)
+                                send_email_notification('', subject, message, email, video_image_path)
+                                save_thumb = False
                 elif action_label == "punching" and punching_keypoints_visible:
                     cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                     if (x, y, w, h) not in pending_recording:
@@ -178,11 +207,17 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 video_filename = os.path.join('static', 'video', video_file)
                                 video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
                                 recording = True
+
+                                if save_thumb == False:
+                                    video_image_path = f"thumbnail/{int(current_time)}.png"
+                                    cv2.imwrite(video_image_path, frame_with_results)
+                                    save_thumb = True
                             if video_file:
                                 detection_logger.info(f"Person detected punching - {video_file}")
-                                subject = "Lambda System"
+                                subject = "Aggressive Behavior Detected"
                                 message = "Person detected showing aggressive behavior - Punching"
-                                send_email_notification('', subject, message, email)
+                                send_email_notification('', subject, message, email, video_image_path)
+                                save_thumb = False
     for (x, y, w, h) in faces:
         roi_gray = gray[y:y+h, x:x+w]
         roi_color = frame[y:y+h, x:x+w]
@@ -194,22 +229,27 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 print(dominant_emotion, emotion_confidences[dominant_emotion])
 
                 if dominant_emotion == "angry":
-                    if emotion_confidences[dominant_emotion] > 0.50:  # Adjust threshold for confidence
+                    if emotion_confidences[dominant_emotion] > 0.40:  # Adjust threshold for confidence
                         if (x, y, w, h) not in pending_recording:
                             pending_recording[(x, y, w, h)] = current_time
                         else:
-                            if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                            if current_time - pending_recording[(x, y, w, h)] >= 1:
                                 angry_detection_times[(x, y, w, h)] = current_time
                                 if not recording:
                                     video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
                                     video_filename = os.path.join('static', 'video', video_file)
                                     video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
                                     recording = True
+                                    if save_thumb == False:
+                                        video_image_path = f"thumbnail/{int(current_time)}.png"
+                                        cv2.imwrite(video_image_path, roi_color)
+                                        save_thumb = True
                                 if video_file:
                                     detection_logger.info(f"Angry person detected - {video_file}")
-                                    subject = "Lambda System"
+                                    subject = "Emotional Instability Detected"
                                     message = "Angry person detected"
-                                    send_email_notification(name, subject, message, email)
+                                    send_email_notification(name, subject, message, email, video_image_path)
+                                    save_thumb = False
                     else:
                         if (x, y, w, h) in pending_recording:
                             pending_recording.pop((x, y, w, h))
@@ -237,14 +277,14 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
 
                 if name not in detection_times:
                     detection_times[name] = current_time
-                    subject = "Lambda System"
-                    message = "Face Detected from " + name
-                    send_email_notification(name, subject, message, email)
                 else:
                     if current_time - detection_times[name] >= 5 and (current_time - last_detection_time.get(name, 0)) >= 5:
+                        face_image_path = f"detected_faces/{name}_{int(current_time)}.png"
+                        cv2.imwrite(face_image_path, roi_color)
+
                         subject = "Lambda System"
                         message = "Face Detected from " + name
-                        send_email_notification(name, subject, message, email)
+                        send_email_notification(name, subject, message, email, face_image_path)
                         last_detection_time[name] = current_time
                 face_last_seen[name] = current_time
             else:

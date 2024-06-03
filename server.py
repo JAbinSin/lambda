@@ -32,6 +32,10 @@ if not os.path.exists('static/images'):
     os.makedirs('static/images')
 if not os.path.exists('captured_images'):
     os.makedirs('captured_images')
+if not os.path.exists('detected_faces'):
+    os.makedirs('detected_faces')
+if not os.path.exists('thumbnail'):
+    os.makedirs('thumbnail')
 
 # Check if the database file exists, and create it if not
 if not os.path.exists(DATABASE_PATH):
