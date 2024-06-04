@@ -248,7 +248,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                     detection_logger.info(f"Angry person detected - {video_file}")
                                     subject = "Emotional Instability Detected"
                                     message = "Angry person detected"
-                                    send_email_notification(name, subject, message, email, video_image_path)
+                                    send_email_notification('', subject, message, email, video_image_path)
                                     save_thumb = False
                     else:
                         if (x, y, w, h) in pending_recording:
