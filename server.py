@@ -1,4 +1,5 @@
 from flask import Flask, render_template, Response, request, redirect, url_for, session, jsonify, send_from_directory
+from flask_bcrypt import Bcrypt
 from script.camera import generate_frames
 from script.register import register_camera
 from script.captureState import set_capture_complete, is_capture_complete, set_training_complete, is_training_complete
@@ -12,6 +13,8 @@ import webview
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex()  # Set a secret key for session management
+
+bcrypt = Bcrypt(app)
 
 lock  = threading.Lock()
 
@@ -55,8 +58,9 @@ if not os.path.exists(DATABASE_PATH):
         print("Faces table created.")
         # Insert default user if not already present
         cursor = conn.cursor()
+        hashed_password = bcrypt.generate_password_hash('admin').decode('utf-8')
         cursor.execute('''INSERT INTO users (email, password) 
-                          VALUES (?, ?)''', ('admin@admin', 'admin'))
+                          VALUES (?, ?)''', ('admin@admin', hashed_password))
         conn.commit()
         
 
@@ -119,10 +123,12 @@ def login():
 def validate_login(email, password):
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ? AND password = ?", (email, password))
+        cursor.execute("SELECT password FROM users WHERE email = ?", (email,))
         user = cursor.fetchone()
 
-    return user is not None
+    if user and bcrypt.check_password_hash(user[0], password):
+        return True
+    return False
 
 @app.route('/register')
 def register():
@@ -324,22 +330,30 @@ def change_password():
         new_password = request.form['newPassword']
         confirm_new_password = request.form['confirmNewPassword']
         
-        # Check if new pass and confirm password match
+        # Check if new password and confirm password match
         if new_password != confirm_new_password:
             return "Passwords do not match.", 400
         
-        # Validate password
+        # Validate current password
         email = session['email']  # Get the current email from session or wherever it's stored
-        if not validate_login(email, current_password):
-            return "Incorrect password.", 400
-        
-        # Update email in the database
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE users SET password = ? WHERE email = ?", (new_password, email))
-            conn.commit()
+            cursor.execute("SELECT password FROM users WHERE email = ?", (email,))
+            user = cursor.fetchone()
         
-        return "Password updated successfully."
+        if user and bcrypt.check_password_hash(user[0], current_password):
+            # Hash the new password
+            hashed_new_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+            
+            # Update password in the database
+            with sqlite3.connect(DATABASE_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET password = ? WHERE email = ?", (hashed_new_password, email))
+                conn.commit()
+            
+            return "Password updated successfully."
+        else:
+            return "Incorrect current password.", 400
     else:
         return redirect(url_for('login'))
     

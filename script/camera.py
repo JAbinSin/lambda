@@ -14,7 +14,8 @@ import xgboost as xgb
 import pandas as pd
 import joblib
 from flask import session
-from fer import FER  # Importing FER library
+from fer import FER
+import numpy as np
 
 # Disable logging for YOLOv8
 logging.getLogger('ultralytics').setLevel(logging.ERROR)
@@ -55,6 +56,13 @@ labels = ["nose", "left_eye", "right_eye", "left_ear", "right_ear", "left_should
 
 # Initialize the FER emotion detection model
 emotion_detector = FER()
+
+# Initialize previous wrist positions and time for velocity calculation
+previous_wrist_positions = {
+    "left_wrist": None,
+    "right_wrist": None
+}
+previous_time = None
 
 # Function to reload LBPH trained model
 def reload_lbph_trained_model():
@@ -114,6 +122,8 @@ def send_email_notification(name, subject, message, email, attachment_path=None)
 
 # Face detection and pose estimation function
 def detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, email, angry_detection_times, action_detection_times, video_writer, recording, pending_recording):
+    global previous_wrist_positions, previous_time
+    
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
     results = pose_model(frame, verbose=False)
@@ -136,6 +146,18 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
 
     current_time = time.time()  # Ensure current_time is defined at the beginning of the function
 
+    # Calculate wrist velocities
+    wrist_velocities = {}
+    for wrist in ["left_wrist", "right_wrist"]:
+        if wrist in visible_keypoints:
+            wrist_position = np.array([keypoints_numpy[labels.index(wrist), 0], keypoints_numpy[labels.index(wrist), 1]])
+            if previous_wrist_positions[wrist] is not None and previous_time is not None:
+                wrist_velocity = np.linalg.norm(wrist_position - previous_wrist_positions[wrist]) / (current_time - previous_time)
+                wrist_velocities[wrist] = wrist_velocity
+            previous_wrist_positions[wrist] = wrist_position
+
+    previous_time = current_time
+
     for r in results:
         bound_box = r.boxes.xyxy
         conf = r.boxes.conf.tolist()
@@ -157,7 +179,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 binary_predictions = int(behavior[0])  # Get the class with the highest probability
 
                 # Determine action label
-                action_labels = ['squatting', 'standing', 'punching', 'kicking']
+                action_labels = ['punching', 'kicking', 'nothing']
                 action_label = action_labels[binary_predictions]
 
                 # Check the visibility of required keypoints
@@ -169,6 +191,13 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 punching_keypoints_visible = (
                     all(kp in visible_keypoints for kp in ["right_shoulder", "right_elbow", "right_wrist"]) or
                     all(kp in visible_keypoints for kp in ["left_shoulder", "left_elbow", "left_wrist"])
+                )
+
+                # Add velocity check for punching detection
+                punching_velocity_threshold = 0.5  # Define an appropriate threshold
+                high_velocity = (
+                    ("left_wrist" in wrist_velocities and wrist_velocities["left_wrist"] > punching_velocity_threshold) or
+                    ("right_wrist" in wrist_velocities and wrist_velocities["right_wrist"] > punching_velocity_threshold)
                 )
 
                 x, y, w, h = 0, 0, 0, 0  # Initialize x, y, w, h with default values
@@ -195,7 +224,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 message = "Person detected showing aggressive behavior - Kicking"
                                 send_email_notification('', subject, message, email, video_image_path)
                                 save_thumb = False
-                elif action_label == "punching" and punching_keypoints_visible:
+                elif action_label == "punching" and punching_keypoints_visible and high_velocity:
                     cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                     if (x, y, w, h) not in pending_recording:
                         pending_recording[(x, y, w, h)] = current_time

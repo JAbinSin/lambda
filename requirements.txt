@@ -1,7 +1,9 @@
 absl-py==2.1.0
+altgraph==0.17.4
 astunparse==1.6.3
 blinker==1.8.2
 bottle==0.12.25
+bottle-websocket==0.2.9
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
@@ -11,6 +13,7 @@ colorama==0.4.6
 contourpy==1.2.1
 cycler==0.12.1
 decorator==4.4.2
+Eel==0.16.0
 facenet-pytorch==2.6.0
 fer==22.5.1
 ffmpeg==1.4
@@ -19,8 +22,12 @@ Flask==3.0.3
 flatbuffers==24.3.25
 fonttools==4.52.4
 fsspec==2024.5.0
+future==1.0.0
 gast==0.5.4
+gevent==24.2.1
+gevent-websocket==0.10.1
 google-pasta==0.2.0
+greenlet==3.0.3
 grpcio==1.64.0
 h5py==3.11.0
 idna==3.7
@@ -32,6 +39,7 @@ Jinja2==3.1.4
 joblib==1.4.2
 keras==3.3.3
 kiwisolver==1.4.5
+lapx==0.5.9
 libclang==18.1.1
 Markdown==3.6
 markdown-it-py==3.0.0
@@ -51,6 +59,7 @@ opt-einsum==3.3.0
 optree==0.11.0
 packaging==24.0
 pandas==2.2.2
+pefile==2023.2.7
 pillow==10.2.0
 proglog==0.1.10
 protobuf==4.25.3
@@ -64,6 +73,7 @@ python-dateutil==2.9.0.post0
 pythonnet==3.0.3
 pytz==2024.1
 pywebview==5.1
+pywin32-ctypes==0.2.2
 PyYAML==6.0.1
 requests==2.32.3
 rich==13.7.1
@@ -87,5 +97,8 @@ tzdata==2024.1
 ultralytics==8.2.26
 urllib3==2.2.1
 Werkzeug==3.0.3
+whichcraft==0.6.1
 wrapt==1.16.0
 xgboost==2.0.3
+zope.event==5.0
+zope.interface==6.4.post2

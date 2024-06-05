@@ -14,7 +14,7 @@ def register_camera(name):
         # Get the latest label (maximum value) from the 'faces' table
         cursor.execute("SELECT seq FROM sqlite_sequence WHERE name = 'faces'")
         seq = cursor.fetchone()
-        label = seq[0] + 1 if seq is not None else 0
+        label = seq[0] + 1 if seq is not None else 1
 
         # Insert name into the 'faces' table
         cursor.execute("INSERT INTO faces (name) VALUES (?)", (name,))
