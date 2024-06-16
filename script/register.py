@@ -91,7 +91,7 @@ def register_camera(name):
                b'Content-Type: image/jpeg\r\n\r\n' + frame_encoded + b'\r\n')
 
         # Break the loop after capturing 100 images
-        if count > 100:
+        if count > 300:
             set_capture_complete(True)
             break
 
@@ -100,7 +100,7 @@ def register_camera(name):
     yield b'COMPLETE'
 
     # Training LBPH recognizer with all captured images
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    recognizer = cv2.face.LBPHFaceRecognizer_create(radius=1, neighbors=8, grid_x=8, grid_y=8)
 
     faces, labels = [], []
 

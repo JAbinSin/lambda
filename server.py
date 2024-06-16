@@ -1,6 +1,6 @@
 from flask import Flask, render_template, Response, request, redirect, url_for, session, jsonify, send_from_directory
 from flask_bcrypt import Bcrypt
-from script.camera import generate_frames
+from script.camera import generate_frames, reload_email
 from script.register import register_camera
 from script.captureState import set_capture_complete, is_capture_complete, set_training_complete, is_training_complete
 import threading
@@ -33,10 +33,10 @@ if not os.path.exists('static/video'):
     os.makedirs('static/video')
 if not os.path.exists('static/images'):
     os.makedirs('static/images')
+if not os.path.exists('static/detected_faces'):
+    os.makedirs('static/detected_faces')
 if not os.path.exists('captured_images'):
     os.makedirs('captured_images')
-if not os.path.exists('detected_faces'):
-    os.makedirs('detected_faces')
 if not os.path.exists('thumbnail'):
     os.makedirs('thumbnail')
 
@@ -76,10 +76,10 @@ def read_label_to_names():
     return label_to_names
 
 # Function to start the camera thread
-def start_camera_thread(email):
+def start_camera_thread():
     global camera_thread
     if camera_thread is None or not camera_thread.is_alive():
-        camera_thread = threading.Thread(target=generate_frames, args=(email,))
+        camera_thread = threading.Thread(target=generate_frames)
         camera_thread.daemon = True
         camera_thread.start()
 
@@ -158,11 +158,16 @@ def read_logs():
             for line in file:
                 # Split the log entry by ' - ' to separate timestamp and message
                 log_parts = line.strip().split(' - ')
-                if len(log_parts) == 3:
-                    timestamp, message, video_filename = log_parts
-                    logs.append({'timestamp': timestamp, 'message': message, 'video_filename': video_filename})
+                if len(log_parts) == 4:
+                    timestamp, title, message, media_filename = log_parts
+                    log_entry = {'timestamp': timestamp, 'title': title, 'message': message}
+                    if media_filename.endswith('.mp4'):
+                        log_entry['video_filename'] = media_filename
+                    elif media_filename.endswith(('.jpg', '.jpeg', '.png')):
+                        log_entry['image_filename'] = media_filename
+                    logs.append(log_entry)
                 else:
-                    logs.append({'timestamp': '', 'message': '', 'video_filename': line.strip()})
+                    logs.append({'timestamp': '', 'title': '', 'message': '', 'video_filename': line.strip()})
     except FileNotFoundError:
         # Handle file not found error
         pass
@@ -170,10 +175,8 @@ def read_logs():
     
 @app.route('/video_feed')
 def video_feed():
-    # Start the camera thread if not already running
-    email = session.get('email')  # Get the email from the session
-    start_camera_thread(email)  # Pass the email to the camera thread
-    return Response(generate_frames(email), mimetype='multipart/x-mixed-replace; boundary=frame')
+    start_camera_thread()
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/help')
 def help():
@@ -201,10 +204,13 @@ def get_log_content():
             content = file.readlines()
             formatted_content = ""
             for line in content:
-                # Check if the line contains a video filename
+                # Check if the line contains a video or image filename
                 if ".mp4" in line:
                     video_filename = line.split()[-1]
-                    formatted_content += f'{line.strip()} <button class="view-video-btn btn btn-outline-info btn-sm" data-video-filename="{video_filename}">View Video</button><br>'
+                    formatted_content += f'{line.strip()} <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{video_filename}" data-media-type="video">View Video</button><br>'
+                elif any(ext in line for ext in [".jpg", ".jpeg", ".png"]):
+                    image_filename = line.split()[-1]
+                    formatted_content += f'{line.strip()} <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{image_filename}" data-media-type="image">View Image</button><br>'
                 else:
                     formatted_content += line + "<br>"
             return formatted_content
@@ -317,7 +323,9 @@ def change_email():
             
         # Update the email in the session
         session['email'] = new_email
-        
+
+        reload_email()
+
         return "Email updated successfully."
     else:
         return redirect(url_for('login'))
@@ -393,6 +401,15 @@ def delete_entry():
 @app.route('/video/<filename>')
 def video(filename):
     return send_from_directory('static/video', filename)
+
+@app.route('/media/<media_type>/<filename>')
+def media(media_type, filename):
+    if media_type == 'video':
+        return send_from_directory('static/video', filename)
+    elif media_type == 'image':
+        return send_from_directory('static/images', filename)
+    else:
+        return 'Invalid media type.', 400
 
 @app.route('/get_activity_history')
 def get_activity_history():

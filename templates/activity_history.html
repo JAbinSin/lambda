@@ -3,11 +3,15 @@
     {% for log in logs[::-1] %}
     <a class="list-group-item list-group-item-action bg-dark text-white">
         <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">Detection</h5>
+            <h5 class="mb-1">{{ log.title }}</h5>
             <small>{{ log.timestamp }}</small>
         </div>
         <p class="mb-1">{{ log.message }}</p>
-        <button class="view-video-btn btn btn-outline-info btn-sm" data-video-filename="{{ log.video_filename }}">View Video</button>
+        {% if log.video_filename %}
+        <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{{ log.video_filename }}" data-media-type="video">View Video</button>
+        {% elif log.image_filename %}
+        <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{{ log.image_filename }}" data-media-type="image">View Image</button>
+        {% endif %}
     </a>
     {% endfor %}
 </div>

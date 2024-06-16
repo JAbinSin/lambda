@@ -37,11 +37,15 @@
                     {% for log in logs %}
                     <a class="list-group-item list-group-item-action bg-dark text-white">
                         <div class="d-flex w-100 justify-content-between">
-                            <h5 class="mb-1">Detection</h5>
+                            <h5 class="mb-1">{{ log.title }}</h5>
                             <small>{{ log.timestamp }}</small>
                         </div>
                         <p class="mb-1">{{ log.message }}</p>
-                        <button class="view-video-btn btn btn-outline-info btn-sm" data-video-filename="{{ log.video_filename }}">View Video</button>
+                        {% if log.video_filename %}
+                        <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{{ log.video_filename }}" data-media-type="video">View Video</button>
+                        {% elif log.image_filename %}
+                        <button class="view-media-btn btn btn-outline-info btn-sm" data-media-filename="{{ log.image_filename }}" data-media-type="image">View Image</button>
+                        {% endif %}
                     </a>
                     {% endfor %}
                 </div>
@@ -59,18 +63,19 @@
         </div>
     </div>
 
-    <!-- Video Modal -->
-    <div class="modal" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <!-- Media Modal -->
+    <div class="modal" id="mediaModal" tabindex="-1" role="dialog" aria-labelledby="mediaModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="videoModalLabel">Log Video</h5>
+                    <h5 class="modal-title" id="mediaModalLabel">Log Media</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <video id="logVideo" controls >
+                    <video id="logVideo" controls class="d-none">
                         Your browser does not support the video tag.
                     </video>
+                    <img id="logImage" class="img-fluid rounded-3 d-none" alt="Log Image">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -88,6 +93,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.getElementById('videoModal');
             const videoElement = document.getElementById('logVideo');
+            const imageElement = document.getElementById('logImage');
     
             $('#videoModal').on('hide.bs.modal', function () {
                 console.log('Modal closed');
@@ -104,22 +110,30 @@
                 });
             }
     
-            // Function to register event listeners for view video buttons
+            // Function to register event listeners for view media buttons
             function registerEventListeners() {
-                document.querySelectorAll('.view-video-btn').forEach(button => {
+                document.querySelectorAll('.view-media-btn').forEach(button => {
                     button.addEventListener('click', function() {
-                        const videoFilename = this.getAttribute('data-video-filename');
-                        if (videoFilename) {
-                            const videoElement = document.getElementById('logVideo');
-                            const videoSource = document.createElement('source');
-                            videoSource.src = `/static/video/${videoFilename}`;
-                            videoSource.type = 'video/mp4';
-                            videoElement.innerHTML = ''; // Clear existing sources
-                            videoElement.appendChild(videoSource); // Append new source to video element
-                            videoElement.load(); // Reload video element to reflect new source
-                            $('#videoModal').modal('show');
+                        const mediaFilename = this.getAttribute('data-media-filename');
+                        const mediaType = this.getAttribute('data-media-type');
+                        if (mediaFilename && mediaType) {
+                            if (mediaType === 'video') {
+                                videoElement.classList.remove('d-none');
+                                imageElement.classList.add('d-none');
+                                const videoSource = document.createElement('source');
+                                videoSource.src = `/static/video/${mediaFilename}`;
+                                videoSource.type = 'video/mp4';
+                                videoElement.innerHTML = ''; // Clear existing sources
+                                videoElement.appendChild(videoSource); // Append new source to video element
+                                videoElement.load(); // Reload video element to reflect new source
+                            } else if (mediaType === 'image') {
+                                imageElement.src = `/static/detected_faces/${mediaFilename}`;
+                                imageElement.classList.remove('d-none');
+                                videoElement.classList.add('d-none');
+                            }
+                            $('#mediaModal').modal('show');
                         } else {
-                            alert('No video available for this log entry.');
+                            alert('No media available for this log entry.');
                         }
                     });
                 });

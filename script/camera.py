@@ -16,6 +16,10 @@ import joblib
 from flask import session
 from fer import FER
 import numpy as np
+import threading
+import time
+import serial
+import time
 
 # Disable logging for YOLOv8
 logging.getLogger('ultralytics').setLevel(logging.ERROR)
@@ -64,6 +68,24 @@ previous_wrist_positions = {
 }
 previous_time = None
 
+# Function to reload Email
+def reload_email():
+    global email
+    DATABASE_DIR = 'database'
+    DATABASE_FILE = 'database.db'
+    DATABASE_PATH = os.path.join(DATABASE_DIR, DATABASE_FILE)
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT email FROM users LIMIT 1")
+        email_tuple = cursor.fetchone()
+        if email_tuple:
+            email = email_tuple[0]
+        else:
+            email = None
+
+# Initial load of the Email
+reload_email()
+
 # Function to reload LBPH trained model
 def reload_lbph_trained_model():
     global lbph_recognizer
@@ -79,10 +101,6 @@ reload_lbph_trained_model()
 # Database connection
 def get_db_connection():
     return sqlite3.connect('database/database.db')
-
-# Email notification function
-import threading
-import time
 
 def send_email_notification(name, subject, message, email, attachment_path=None):
     def send_email():
@@ -120,8 +138,16 @@ def send_email_notification(name, subject, message, email, attachment_path=None)
     email_thread = threading.Thread(target=send_email)
     email_thread.start()
 
+# Function to calculate the angle between three points
+def calculate_angle(a, b, c):
+    ba = a - b
+    bc = c - b
+    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle = np.arccos(cosine_angle)
+    return np.degrees(angle)
+
 # Face detection and pose estimation function
-def detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, email, angry_detection_times, action_detection_times, video_writer, recording, pending_recording):
+def detect_faces_and_poses(frame, detection_times, last_detection_time, face_last_seen, angry_detection_times, action_detection_times, video_writer, recording, pending_recording):
     global previous_wrist_positions, previous_time
     
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -193,11 +219,31 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                     all(kp in visible_keypoints for kp in ["left_shoulder", "left_elbow", "left_wrist"])
                 )
 
-                # Add velocity check for punching detection
-                punching_velocity_threshold = 0.5  # Define an appropriate threshold
+                # Calculate angles for the left and right arm
+                left_arm_angle = None
+                right_arm_angle = None
+
+                if "left_shoulder" in visible_keypoints and "left_elbow" in visible_keypoints and "left_wrist" in visible_keypoints:
+                    left_shoulder = np.array([keypoints_numpy[labels.index("left_shoulder"), 0], keypoints_numpy[labels.index("left_shoulder"), 1]])
+                    left_elbow = np.array([keypoints_numpy[labels.index("left_elbow"), 0], keypoints_numpy[labels.index("left_elbow"), 1]])
+                    left_wrist = np.array([keypoints_numpy[labels.index("left_wrist"), 0], keypoints_numpy[labels.index("left_wrist"), 1]])
+                    left_arm_angle = calculate_angle(left_shoulder, left_elbow, left_wrist)
+
+                if "right_shoulder" in visible_keypoints and "right_elbow" in visible_keypoints and "right_wrist" in visible_keypoints:
+                    right_shoulder = np.array([keypoints_numpy[labels.index("right_shoulder"), 0], keypoints_numpy[labels.index("right_shoulder"), 1]])
+                    right_elbow = np.array([keypoints_numpy[labels.index("right_elbow"), 0], keypoints_numpy[labels.index("right_elbow"), 1]])
+                    right_wrist = np.array([keypoints_numpy[labels.index("right_wrist"), 0], keypoints_numpy[labels.index("right_wrist"), 1]])
+                    right_arm_angle = calculate_angle(right_shoulder, right_elbow, right_wrist)
+
+                # Add velocity and angle checks for punching detection
+                punching_velocity_threshold = 0.7  # Define an appropriate threshold
                 high_velocity = (
                     ("left_wrist" in wrist_velocities and wrist_velocities["left_wrist"] > punching_velocity_threshold) or
                     ("right_wrist" in wrist_velocities and wrist_velocities["right_wrist"] > punching_velocity_threshold)
+                )
+                arm_stretched = (
+                    (left_arm_angle is not None and left_arm_angle > 100) or
+                    (right_arm_angle is not None and right_arm_angle > 100)
                 )
 
                 x, y, w, h = 0, 0, 0, 0  # Initialize x, y, w, h with default values
@@ -206,7 +252,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                     if (x, y, w, h) not in pending_recording:
                         pending_recording[(x, y, w, h)] = current_time
                     else:
-                        if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                        if current_time - pending_recording[(x, y, w, h)] >= 1.0:
                             action_detection_times[(x, y, w, h)] = current_time
                             if not recording:
                                 video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
@@ -219,17 +265,17 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                     cv2.imwrite(video_image_path, frame_with_results)
                                     save_thumb = True
                             if video_file:
-                                detection_logger.info(f"Person detected kicking - {video_file}")
+                                detection_logger.info(f"Aggressive Behavior Detected - Person detected kicking - {video_file}")
                                 subject = "Aggressive Behavior Detected"
                                 message = "Person detected showing aggressive behavior - Kicking"
                                 send_email_notification('', subject, message, email, video_image_path)
                                 save_thumb = False
-                elif action_label == "punching" and punching_keypoints_visible and high_velocity:
+                elif action_label == "punching" and punching_keypoints_visible and high_velocity and arm_stretched:
                     cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                     if (x, y, w, h) not in pending_recording:
                         pending_recording[(x, y, w, h)] = current_time
                     else:
-                        if current_time - pending_recording[(x, y, w, h)] >= 1.5:
+                        if current_time - pending_recording[(x, y, w, h)] >= 1.0:
                             action_detection_times[(x, y, w, h)] = current_time
                             if not recording:
                                 video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
@@ -242,7 +288,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                     cv2.imwrite(video_image_path, frame_with_results)
                                     save_thumb = True
                             if video_file:
-                                detection_logger.info(f"Person detected punching - {video_file}")
+                                detection_logger.info(f"Aggressive Behavior Detected - Person detected punching - {video_file}")
                                 subject = "Aggressive Behavior Detected"
                                 message = "Person detected showing aggressive behavior - Punching"
                                 send_email_notification('', subject, message, email, video_image_path)
@@ -255,14 +301,13 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
             if result:
                 emotion_confidences = result[0]["emotions"]
                 dominant_emotion = max(emotion_confidences, key=emotion_confidences.get)
-                print(dominant_emotion, emotion_confidences[dominant_emotion])
 
                 if dominant_emotion == "angry":
                     if emotion_confidences[dominant_emotion] > 0.40:  # Adjust threshold for confidence
                         if (x, y, w, h) not in pending_recording:
                             pending_recording[(x, y, w, h)] = current_time
                         else:
-                            if current_time - pending_recording[(x, y, w, h)] >= 1:
+                            if current_time - pending_recording[(x, y, w, h)] >= 0.3:
                                 angry_detection_times[(x, y, w, h)] = current_time
                                 if not recording:
                                     video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
@@ -274,7 +319,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                         cv2.imwrite(video_image_path, roi_color)
                                         save_thumb = True
                                 if video_file:
-                                    detection_logger.info(f"Angry person detected - {video_file}")
+                                    detection_logger.info(f"Aggressive Behavior Detected - Angry person detected - {video_file}")
                                     subject = "Emotional Instability Detected"
                                     message = "Angry person detected"
                                     send_email_notification('', subject, message, email, video_image_path)
@@ -300,21 +345,34 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))
                 face_name = cursor.fetchone()
 
-            if face_name and confidence > 0.05:
+            if face_name and confidence > 30:
                 name = face_name[0]
+
                 cv2.putText(frame_with_results, f"{name}: {confidence:.2f}%", (x, y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
                 if name not in detection_times:
                     detection_times[name] = current_time
                 else:
                     if current_time - detection_times[name] >= 5 and (current_time - last_detection_time.get(name, 0)) >= 5:
-                        face_image_path = f"detected_faces/{name}_{int(current_time)}.png"
-                        cv2.imwrite(face_image_path, roi_color)
-
-                        subject = "Lambda System"
+                        face_image_path = f"static/detected_faces/{name}_{int(current_time)}.png"
+                        cv2.imwrite(face_image_path, frame_with_results)
+                        detection_logger.info(f"Known Face Detected - Face from {name} detected - {name}_{int(current_time)}.png")
+                        subject = "Known Face Detected"
                         message = "Face Detected from " + name
                         send_email_notification(name, subject, message, email, face_image_path)
                         last_detection_time[name] = current_time
+
+                        try:
+                            # Change this to the serial port where your ESP32 is connected
+                            SERIAL_PORT = 'COM10'
+
+                            # Establish serial connection
+                            ser = serial.Serial(SERIAL_PORT, 115200, timeout=1)
+                            command = '0'
+                            ser.write(command.encode())
+                        except:
+                            print("Serial connection closed")
+                    detection_times[name] = current_time
                 face_last_seen[name] = current_time
             else:
                 cv2.putText(frame_with_results, f"Unknown: {confidence:.2f}%", (x, y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
@@ -336,7 +394,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
     return frame_with_results, video_writer, recording, pending_recording
 
 # Frame generation function
-def generate_frames(email):
+def generate_frames():
     cap = cv2.VideoCapture(0)
     cap.set(3, 1280)
     cap.set(4, 720)
@@ -365,7 +423,7 @@ def generate_frames(email):
 
         frame = cv2.resize(frame, (640, 480))
         frame_with_faces_and_poses, video_writer, recording, pending_recording = detect_faces_and_poses(
-            frame, detection_times, last_detection_time, face_last_seen, email, angry_detection_times, action_detection_times, video_writer, recording, pending_recording
+            frame, detection_times, last_detection_time, face_last_seen, angry_detection_times, action_detection_times, video_writer, recording, pending_recording
         )
 
         frame_count += 1
@@ -387,6 +445,6 @@ def generate_frames(email):
 if __name__ == "__main__":
     # Start the camera in a separate thread
     email = session.get('email')  # Set the email address here
-    camera_thread = threading.Thread(target=generate_frames, args=(email,))
+    camera_thread = threading.Thread(target=generate_frames)
     camera_thread.daemon = True
     camera_thread.start()

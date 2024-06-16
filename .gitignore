@@ -4,7 +4,7 @@ script/__pycache__/
 training/
 logs/*
 captured_images/*
-detected_faces/*
+static/detected_faces/*
 static/images/*
 static/video/*
 thumbnail/*
