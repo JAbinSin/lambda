@@ -6,6 +6,11 @@ from flask import session
 from script.captureState import set_capture_complete, set_training_complete
 from script.camera import reload_lbph_trained_model
 
+# Database Path
+DATABASE_DIR = 'database'
+DATABASE_FILE = 'database.db'
+DATABASE_PATH = os.path.join(DATABASE_DIR, DATABASE_FILE)
+
 def register_camera(name):
     # Connect to SQLite3 database using a context manager
     with sqlite3.connect(f'database/database.db') as conn:
@@ -24,7 +29,12 @@ def register_camera(name):
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
     # Open the camera (0 represents the default camera)
-    cap = cv2.VideoCapture(0)
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT source FROM settings WHERE id = 1")
+        source = cursor.fetchone()
+        new_source = int(source[0])
+    cap = cv2.VideoCapture(new_source)
 
     # Set the resolution to 720p
     cap.set(3, 1280)  # Width

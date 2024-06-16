@@ -20,6 +20,9 @@
                     <a class='nav-link me-2' href="{{ url_for('history_page') }}"><i class='bi bi-bell-fill'></i> History</i></a>
                 </li>
                 <li class='nav-item'>
+                    <a class='nav-link me-2' href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i class='bi bi-gear-fill'></i> Settings</a>
+                </li>
+                <li class='nav-item'>
                     <a class='nav-link me-2' href="{{ url_for('help_page') }}"><i class='bi bi-question-circle-fill'></i> Help</i></a>
                 </li>
                 <li class='nav-item'>
@@ -52,3 +55,80 @@
     </div>
     {% endif %}
 </nav>
+
+<!-- Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="settingsModalLabel">Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Note: Source ID can be Number or IP Address</p>
+                <!-- Form for entering video source ID -->
+                <div class="mb-3">
+                    <label for="videoSourceInput" class="form-label">Video Source ID:</label>
+                    <input type="text" class="form-control" id="videoSourceInput" placeholder="Enter video source ID">
+                    <div id="videoSourceError" class="text-danger mt-2" style="display: none;">This video source ID is invalid.</div>
+                </div>
+                <!-- Checkbox for agreement -->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="" id="confirmCheckbox">
+                    <label class="form-check-label" for="confirmCheckbox">Confirm Changes.</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <!-- Disabled "Continue" button initially -->
+                <button type="button" class="btn btn-primary disabled" id="confirmSettingsBtn">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmCheckbox = document.getElementById('confirmCheckbox');
+        const videoSourceInput = document.getElementById('videoSourceInput');
+        const confirmSettingsBtn = document.getElementById('confirmSettingsBtn');
+        const videoSourceError = document.getElementById('videoSourceError');
+    
+        function validateForm() {
+            if (confirmCheckbox.checked && videoSourceInput.value.trim() !== '') {
+                confirmSettingsBtn.classList.remove('disabled');
+            } else {
+                confirmSettingsBtn.classList.add('disabled');
+            }
+        }
+    
+        confirmCheckbox.addEventListener('change', validateForm);
+        videoSourceInput.addEventListener('input', validateForm);
+    
+        confirmSettingsBtn.addEventListener('click', function() {
+            if (!confirmSettingsBtn.classList.contains('disabled')) {
+                const videoSourceID = videoSourceInput.value.trim();
+                if (videoSourceID) {
+                    fetch('{{ url_for("settings_source") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ video_source_id: videoSourceID })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            videoSourceError.style.display = 'block';
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                } else {
+                    videoSourceError.style.display = 'block';
+                }
+            }
+        });
+    });
+</script>

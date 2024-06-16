@@ -50,6 +50,11 @@ model_xgb = xgb.Booster()
 model_xgb.load_model('trained_models/model_weights.xgb')
 scaler = joblib.load('trained_models/scaler.pkl')
 
+# Database Path
+DATABASE_DIR = 'database'
+DATABASE_FILE = 'database.db'
+DATABASE_PATH = os.path.join(DATABASE_DIR, DATABASE_FILE)
+
 # Load the pre-trained face cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -395,7 +400,12 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
 
 # Frame generation function
 def generate_frames():
-    cap = cv2.VideoCapture(0)
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT source FROM settings WHERE id = 1")
+        source = cursor.fetchone()
+    new_source = int(source[0])
+    cap = cv2.VideoCapture(new_source)
     cap.set(3, 1280)
     cap.set(4, 720)
     cap.set(cv2.CAP_PROP_FPS, 60)

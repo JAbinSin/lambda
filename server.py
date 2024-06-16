@@ -58,11 +58,18 @@ if not os.path.exists(DATABASE_PATH):
                             name TEXT NOT NULL
                           )''')
         print("Faces table created.")
+        conn.execute('''CREATE TABLE IF NOT EXISTS settings (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            source TEXT NOT NULL
+                          )''')
+        print("Settings table created.")
         # Insert default user if not already present
         cursor = conn.cursor()
         hashed_password = bcrypt.generate_password_hash('admin').decode('utf-8')
         cursor.execute('''INSERT INTO users (email, password) 
                           VALUES (?, ?)''', ('admin@admin', hashed_password))
+        cursor.execute('''INSERT INTO settings (source) 
+                          VALUES (?)''', (0,))
         conn.commit()
         
 
@@ -286,7 +293,23 @@ def manage_face():
         return render_template('manage_face.html', label_to_names=label_to_names)
     else:
         return redirect(url_for('login'))
-    
+
+@app.route('/settings_source', methods=['POST'])
+def settings_source():
+    if 'authenticated' in session and session['authenticated']:
+        data = request.json
+        video_source_id = data.get('video_source_id')
+        if video_source_id:
+            with sqlite3.connect(DATABASE_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("UPDATE settings SET source = ? WHERE id = 1", (video_source_id,))
+                conn.commit()
+            return jsonify(success=True)
+        else:
+            return jsonify(success=False), 400
+    else:
+        return jsonify(success=False), 403
+
 @app.route('/help_page')
 def help_page():
     return render_template('help.html')
