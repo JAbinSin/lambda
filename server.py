@@ -49,7 +49,8 @@ if not os.path.exists(DATABASE_PATH):
         # Create tables or initialize any necessary database setup here
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        email TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        email TEXT,
                         password TEXT NOT NULL
                         )''')
         print("Users table created.")
@@ -66,8 +67,8 @@ if not os.path.exists(DATABASE_PATH):
         # Insert default user if not already present
         cursor = conn.cursor()
         hashed_password = bcrypt.generate_password_hash('admin').decode('utf-8')
-        cursor.execute('''INSERT INTO users (email, password) 
-                          VALUES (?, ?)''', ('admin@admin', hashed_password))
+        cursor.execute('''INSERT INTO users (username, password) 
+                          VALUES (?, ?)''', ('admin', hashed_password))
         cursor.execute('''INSERT INTO settings (source) 
                           VALUES (?)''', (0,))
         conn.commit()
@@ -109,19 +110,19 @@ def login():
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        email = request.form['email']
+        username = request.form['username']
         password = request.form['password']
 
         # Validate login credentials
         try:
-            if validate_login(email, password):
+            if validate_login(username, password):
                 # Set the user as authenticated in the session
                 session['authenticated'] = True
-                session['email'] = email
+                session['username'] = username
                 error = None
                 return redirect(url_for('dashboard'))
             else:
-                error = "Invalid email or password"
+                error = "Invalid username or password"
         except Exception as e:
             # Log the exception for debugging purposes
             print(f"Error during login: {e}")
@@ -129,10 +130,10 @@ def login():
 
     return render_template('login.html', error=error)
 # Validation
-def validate_login(email, password):
+def validate_login(username, password):
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE email = ?", (email,))
+        cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
 
     if user and bcrypt.check_password_hash(user[0], password):
@@ -318,8 +319,16 @@ def help_page():
 def user_profile():
     # Check if the user is authenticated
     if 'authenticated' in session and session['authenticated']:
-        email = session.get("email")
-        return render_template('user_profile.html', email=email)
+        username = session.get("username")
+        with sqlite3.connect(DATABASE_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT email FROM users LIMIT 1")
+            email_tuple = cursor.fetchone()
+            if email_tuple:
+                email = email_tuple[0]
+            else:
+                email = None
+        return render_template('user_profile.html', username=username, email=email)
     else:
         return redirect(url_for('login'))
     
@@ -368,10 +377,10 @@ def change_password():
             return "Passwords do not match.", 400
         
         # Validate current password
-        email = session['email']  # Get the current email from session or wherever it's stored
+        username = session['username']  # Get the current email from session or wherever it's stored
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT password FROM users WHERE email = ?", (email,))
+            cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
             user = cursor.fetchone()
         
         if user and bcrypt.check_password_hash(user[0], current_password):
@@ -381,7 +390,7 @@ def change_password():
             # Update password in the database
             with sqlite3.connect(DATABASE_PATH) as conn:
                 cursor = conn.cursor()
-                cursor.execute("UPDATE users SET password = ? WHERE email = ?", (hashed_new_password, email))
+                cursor.execute("UPDATE users SET password = ? WHERE username = ?", (hashed_new_password, username))
                 conn.commit()
             
             return "Password updated successfully."

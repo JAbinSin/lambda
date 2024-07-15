@@ -27,12 +27,18 @@
     <div class="container p-3 mb-2 bg-normal-92 text-white w-50 rounded-3 mt-5">
         <h1 class="text-center mb-4 opacity-1">Admin Profile</h1>
         <div class="row mb-3">
+            <label for="inputUsername" class="col-sm-2 col-form-label">Username:</label>
+            <div class="col-sm-7">
+                <input type="text" class="form-control" id="inputUsername" value="{{ username }}" readonly>
+            </div>
+        </div>
+        <div class="row mb-3">
             <label for="inputEmail" class="col-sm-2 col-form-label">Email:</label>
             <div class="col-sm-7">
                 <input type="email" class="form-control" id="inputEmail" value="{{ email }}" readonly>
             </div>
             <div class="col-sm-3">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeEmailModal">Change Email</button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changeEmailModal">Set Email</button>
             </div>
         </div>
         <div class="row mb-3">
@@ -57,7 +63,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="changeEmailModalLabel">Change Email</h5>
+                    <h5 class="modal-title" id="changeEmailModalLabel">Set Email</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">

@@ -210,7 +210,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                 binary_predictions = int(behavior[0])  # Get the class with the highest probability
 
                 # Determine action label
-                action_labels = ['punching', 'kicking', 'nothing']
+                action_labels = ['punching', 'kicking', 'shaking', 'nothing']
                 action_label = action_labels[binary_predictions]
 
                 # Check the visibility of required keypoints
@@ -258,6 +258,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                         pending_recording[(x, y, w, h)] = current_time
                     else:
                         if current_time - pending_recording[(x, y, w, h)] >= 1.0:
+                            # cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                             action_detection_times[(x, y, w, h)] = current_time
                             if not recording:
                                 video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
@@ -281,6 +282,7 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                         pending_recording[(x, y, w, h)] = current_time
                     else:
                         if current_time - pending_recording[(x, y, w, h)] >= 1.0:
+                            # cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                             action_detection_times[(x, y, w, h)] = current_time
                             if not recording:
                                 video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
@@ -296,6 +298,30 @@ def detect_faces_and_poses(frame, detection_times, last_detection_time, face_las
                                 detection_logger.info(f"Aggressive Behavior Detected - Person detected punching - {video_file}")
                                 subject = "Aggressive Behavior Detected"
                                 message = "Person detected showing aggressive behavior - Punching"
+                                send_email_notification('', subject, message, email, video_image_path)
+                                save_thumb = False
+                elif action_label == "shaking":
+                    cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                    if (x, y, w, h) not in pending_recording:
+                        pending_recording[(x, y, w, h)] = current_time
+                    else:
+                        if current_time - pending_recording[(x, y, w, h)] >= 1.0:
+                            # cv2.putText(frame_with_results, action_label, (20, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                            action_detection_times[(x, y, w, h)] = current_time
+                            if not recording:
+                                video_file = datetime.now().strftime("%Y%m%d_%H%M%S") + ".mp4"
+                                video_filename = os.path.join('static', 'video', video_file)
+                                video_writer = cv2.VideoWriter(video_filename, fourcc, 20.0, (640, 480))
+                                recording = True
+
+                                if save_thumb == False:
+                                    video_image_path = f"thumbnail/{int(current_time)}.png"
+                                    cv2.imwrite(video_image_path, frame_with_results)
+                                    save_thumb = True
+                            if video_file:
+                                detection_logger.info(f"Aggressive Behavior Detected - Person detected shaking - {video_file}")
+                                subject = "Aggressive Behavior Detected"
+                                message = "Person detected showing aggressive behavior - Shaking"
                                 send_email_notification('', subject, message, email, video_image_path)
                                 save_thumb = False
     for (x, y, w, h) in faces:
