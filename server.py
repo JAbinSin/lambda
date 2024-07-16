@@ -345,14 +345,14 @@ def change_email():
             return "New email and confirm email do not match.", 400
         
         # Validate password
-        email = session['email']  # Get the current email from session or wherever it's stored
-        if not validate_login(email, password):
+        username = session['username']  # Get the current email from session or wherever it's stored
+        if not validate_login(username, password):
             return "Incorrect password.", 400
         
         # Update email in the database
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE users SET email = ? WHERE email = ?", (new_email, email))
+            cursor.execute("UPDATE users SET email = ? WHERE username = ?", (new_email, username))
             conn.commit()
             
         # Update the email in the session
